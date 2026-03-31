@@ -65,7 +65,7 @@ const cardVariants = {
     y: 0,
     scale: 1,
     transition: {
-      type: 'spring',
+      type: 'spring' as const,
       stiffness: 100,
       damping: 12,
     },
@@ -152,8 +152,8 @@ function FocusChart() {
     }
   }, [])
 
-  const axisTick = (props: { x?: number; y?: number; payload?: { value: string } }) => {
-    const { x = 0, y = 0, payload } = props
+  const axisTick = (props: Record<string, unknown>) => {
+    const { x = 0, y = 0, payload } = props as { x?: number; y?: number; payload?: { value: string } }
     return (
       <text
         x={x}
@@ -166,8 +166,8 @@ function FocusChart() {
     )
   }
 
-  const yAxisTick = (props: { x?: number; y?: number; payload?: { value: number } }) => {
-    const { x = 0, y = 0, payload } = props
+  const yAxisTick = (props: Record<string, unknown>) => {
+    const { x = 0, y = 0, payload } = props as { x?: number; y?: number; payload?: { value: number } }
     return (
       <text
         x={x}
@@ -226,7 +226,7 @@ function FocusChart() {
               }}
               labelStyle={{ color: 'var(--foreground)' }}
               itemStyle={{ color: 'var(--foreground)' }}
-              formatter={(value: number) => [`${value} 小时`, '专注时长']}
+              formatter={(value) => [`${value} 小时`, '专注时长']}
             />
             <Area
               type="monotone"

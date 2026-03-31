@@ -1,8 +1,10 @@
-export enum Category {
-  ALGO = 'ALGO',
-  EN = 'EN',
-  JP = 'JP',
-}
+export const Category = {
+  ALGO: 'ALGO',
+  EN: 'EN',
+  JP: 'JP',
+} as const
+
+export type Category = (typeof Category)[keyof typeof Category]
 
 export interface UserLog {
   id: string

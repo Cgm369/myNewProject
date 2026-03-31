@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Sparkles, Send, Bot } from 'lucide-react'
 
+const MotionButton = motion(Button)
+
 interface Message {
   role: 'user' | 'ai'
   content: string
@@ -213,7 +215,7 @@ export function CopilotTrigger() {
 
   return (
     <>
-      <motion.Button
+      <MotionButton
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setOpen(true)}
@@ -227,7 +229,7 @@ export function CopilotTrigger() {
         />
         <Sparkles className="size-4" />
         <span className="hidden sm:inline">AI 助教</span>
-      </motion.Button>
+      </MotionButton>
       <CopilotSidebarInternal open={open} onOpenChange={setOpen} />
     </>
   )

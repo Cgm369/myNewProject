@@ -1,7 +1,5 @@
 import { prepare, layout } from '@chenglou/pretext'
 
-const FONT_FAMILY = '16px Inter, system-ui, "Segoe UI", Roboto, sans-serif'
-
 export interface TextLayoutResult {
   height: number
   lineCount: number

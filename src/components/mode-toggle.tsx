@@ -16,13 +16,13 @@ export function ModeToggle() {
       Math.max(y, window.innerHeight - y)
     )
 
-    // @ts-expect-error - View Transitions API
+    // @ts-ignore - View Transitions API
     if (!document.startViewTransition) {
       setTheme(isDark ? 'light' : 'dark')
       return
     }
 
-    // @ts-expect-error - View Transitions API
+    // @ts-ignore - View Transitions API
     const transition = document.startViewTransition(async () => {
       setTheme(isDark ? 'light' : 'dark')
     })
