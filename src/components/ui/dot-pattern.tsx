@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { cn } from '@/lib/utils'
 
 interface DotPatternProps {
@@ -7,7 +8,8 @@ interface DotPatternProps {
 }
 
 export function DotPattern({ className, gap = 16, size = 1 }: DotPatternProps) {
-  const id = `dot-pattern-${Math.random().toString(36).slice(2, 11)}`
+  const patternId = useId()
+  const id = `dot-pattern-${patternId.replace(/:/g, '')}`
 
   return (
     <svg

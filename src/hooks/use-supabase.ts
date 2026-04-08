@@ -3,13 +3,44 @@ import { useAuth } from '@clerk/react'
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+type SafeAuthState = {
+  getToken: ReturnType<typeof useAuth>['getToken']
+  isLoaded: boolean
+  isSignedIn: boolean
+  userId: string | null | undefined
+}
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
+
+function useSafeAuth() {
+  try {
+    const auth = useAuth()
+    return {
+      getToken: auth.getToken,
+      isLoaded: auth.isLoaded,
+      isSignedIn: Boolean(auth.isSignedIn),
+      userId: auth.userId,
+    } satisfies SafeAuthState
+  } catch {
+    return {
+      getToken: async () => null,
+      isLoaded: true,
+      isSignedIn: false,
+      userId: null,
+    } satisfies SafeAuthState
+  }
+}
+
 export function useSupabase() {
-  const { getToken, isLoaded, isSignedIn } = useAuth()
+  const { getToken, isLoaded, isSignedIn, userId } = useSafeAuth()
   const [client, setClient] = useState<SupabaseClient | null>(null)
+  const canUseClient = isSupabaseConfigured && isLoaded && isSignedIn && Boolean(userId)
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) {
-      setClient(null)
+    if (!canUseClient || !userId) {
       return
     }
 
@@ -23,8 +54,8 @@ export function useSupabase() {
       }
 
       const authClient = createClient(
-        import.meta.env.VITE_SUPABASE_URL!,
-        import.meta.env.VITE_SUPABASE_ANON_KEY!,
+        supabaseUrl!,
+        supabaseAnonKey!,
         {
           global: {
             headers: {
@@ -41,7 +72,7 @@ export function useSupabase() {
     return () => {
       cancelled = true
     }
-  }, [isLoaded, isSignedIn, getToken])
+  }, [canUseClient, getToken, userId])
 
-  return { client, isLoaded, isSignedIn }
+  return { client: canUseClient ? client : null, isLoaded, isSignedIn, userId, isSupabaseConfigured }
 }

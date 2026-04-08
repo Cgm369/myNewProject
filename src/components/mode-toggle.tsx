@@ -1,13 +1,22 @@
 import * as React from 'react'
 import { Moon, Sun } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useTheme } from '@/components/theme-provider'
+import { useTheme } from '@/components/theme-context'
+
+type ViewTransition = {
+  ready: Promise<void>
+}
+
+type DocumentWithTransition = Document & {
+  startViewTransition?: (callback: () => Promise<void> | void) => ViewTransition
+}
 
 export function ModeToggle() {
   const { theme, setTheme } = useTheme()
   const isDark = theme === 'dark'
 
   const toggleTheme = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    const documentWithTransition = document as DocumentWithTransition
     const x = event.clientX
     const y = event.clientY
 
@@ -16,19 +25,16 @@ export function ModeToggle() {
       Math.max(y, window.innerHeight - y)
     )
 
-    // @ts-ignore - View Transitions API
-    if (!document.startViewTransition) {
+    if (!documentWithTransition.startViewTransition) {
       setTheme(isDark ? 'light' : 'dark')
       return
     }
 
-    // @ts-ignore - View Transitions API
-    const transition = document.startViewTransition(async () => {
+    const transition = documentWithTransition.startViewTransition(async () => {
       setTheme(isDark ? 'light' : 'dark')
     })
 
     transition.ready.then(() => {
-      // 始终让新主题从点击位置扩散出来
       document.documentElement.animate(
         {
           clipPath: [

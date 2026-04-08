@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   AreaChart,
@@ -10,42 +10,32 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { ActivityCalendar } from 'react-activity-calendar'
-import { Code, BookOpen, Clock, Sparkles } from 'lucide-react'
+import { Code, BookOpen, Clock, LoaderCircle, Sparkles } from 'lucide-react'
 import { preloadTextHeight } from '@/lib/text-measure'
-
-const MOCK_FOCUS_DATA = [
-  { day: 'Mon', hours: 3.5 },
-  { day: 'Tue', hours: 4.2 },
-  { day: 'Wed', hours: 2.8 },
-  { day: 'Thu', hours: 5.1 },
-  { day: 'Fri', hours: 3.9 },
-  { day: 'Sat', hours: 6.0 },
-  { day: 'Sun', hours: 4.5 },
-]
-
-const generateActivityData = () => {
-  const data = []
-  const today = new Date()
-  for (let i = 365; i >= 0; i--) {
-    const date = new Date(today)
-    date.setDate(date.getDate() - i)
-    const count = Math.random() > 0.25 ? Math.floor(Math.random() * 5) : 0
-    data.push({
-      date: date.toISOString().split('T')[0],
-      count,
-      level: count === 0 ? 0 : count,
-    })
-  }
-  return data
-}
-
-const STATS = [
-  { title: '算法题数', value: 256, change: '+12', icon: Code, color: '#a855f7' },
-  { title: '单词量', value: 1280, change: '+50', icon: BookOpen, color: '#22c55e' },
-  { title: '专注总计', value: '128h', change: '+8h', icon: Clock, color: '#f59e0b' },
-]
+import { useSupabase } from '@/hooks'
+import { getDashboardSummary } from '@/services'
+import type { DashboardMetric, DashboardSummary } from '@/types'
 
 const WELCOME_TEXT = 'Hello, Geek. Today is'
+const EMPTY_SUMMARY: DashboardSummary = {
+  focusTrend: [
+    { day: 'Mon', hours: 0 },
+    { day: 'Tue', hours: 0 },
+    { day: 'Wed', hours: 0 },
+    { day: 'Thu', hours: 0 },
+    { day: 'Fri', hours: 0 },
+    { day: 'Sat', hours: 0 },
+    { day: 'Sun', hours: 0 },
+  ],
+  contribution: [],
+  metrics: [
+    { key: 'algo', title: '算法打卡', value: 0, change: '本周 0 次', color: '#a855f7' },
+    { key: 'language', title: '语言打卡', value: 0, change: '本周 0 次', color: '#22c55e' },
+    { key: 'focus', title: '专注总计', value: '0h', change: '本周暂无新增', color: '#f59e0b' },
+  ],
+  description: '还没有学习记录，先去 Profile 中补一条今日打卡。',
+  streak: 0,
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -99,10 +89,10 @@ function BentoCard({ children, className }: BentoCardProps) {
   )
 }
 
-function TypewriterWelcome() {
+function TypewriterWelcome({ streak }: { streak: number }) {
   const [displayText, setDisplayText] = useState('')
   const [showCursor, setShowCursor] = useState(true)
-  const fullText = `${WELCOME_TEXT} ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}. Ready to evolve?`
+  const fullText = `${WELCOME_TEXT} ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}. ${streak > 0 ? `Current streak: ${streak} day${streak > 1 ? 's' : ''}.` : 'Ready to evolve?'}`.trim()
 
   useEffect(() => {
     let index = 0
@@ -115,7 +105,7 @@ function TypewriterWelcome() {
       }
     }, 40)
     return () => clearInterval(timer)
-  }, [])
+  }, [fullText])
 
   useEffect(() => {
     const cursorTimer = setInterval(() => setShowCursor((v) => !v), 530)
@@ -140,17 +130,16 @@ function TypewriterWelcome() {
   )
 }
 
-function FocusChart() {
+function FocusChart({ data, description }: { data: DashboardSummary['focusTrend']; description: string }) {
   const descriptionRef = useRef<HTMLParagraphElement>(null)
 
   useEffect(() => {
     if (descriptionRef.current) {
       const containerWidth = descriptionRef.current.offsetWidth
-      const text = '本周累计专注 29.8 小时，较上周增长 15%。保持良好的学习节奏！'
-      const height = preloadTextHeight(text, containerWidth, 14, 1.6)
+      const height = preloadTextHeight(description, containerWidth, 14, 1.6)
       descriptionRef.current.style.height = `${height}px`
     }
-  }, [])
+  }, [description])
 
   const axisTick = (props: Record<string, unknown>) => {
     const { x = 0, y = 0, payload } = props as { x?: number; y?: number; payload?: { value: string } }
@@ -191,7 +180,7 @@ function FocusChart() {
       <div className="w-full h-[220px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
-            data={MOCK_FOCUS_DATA}
+            data={data}
             margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
           >
             <defs>
@@ -245,15 +234,13 @@ function FocusChart() {
         ref={descriptionRef}
         className="text-xs text-muted-foreground mt-4 overflow-hidden"
       >
-        本周累计专注 29.8 小时，较上周增长 15%。保持良好的学习节奏！
+        {description}
       </p>
     </div>
   )
 }
 
-function ActivityContribution() {
-  const data = generateActivityData()
-
+function ActivityContribution({ data }: { data: DashboardSummary['contribution'] }) {
   return (
     <div className="p-6 w-full">
       <h3 className="text-lg font-semibold text-foreground mb-4">年度贡献</h3>
@@ -287,18 +274,12 @@ function ActivityContribution() {
 }
 
 function StatCard({
-  title,
-  value,
-  change,
-  icon: Icon,
-  color,
+  metric,
 }: {
-  title: string
-  value: string | number
-  change: string
-  icon: React.ElementType
-  color: string
+  metric: DashboardMetric
 }) {
+  const Icon = metric.key === 'algo' ? Code : metric.key === 'language' ? BookOpen : Clock
+
   return (
     <motion.div
       variants={cardVariants}
@@ -309,19 +290,19 @@ function StatCard({
       <div
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
         style={{
-          boxShadow: `inset 0 0 25px ${color}15, 0 0 35px ${color}10`,
+          boxShadow: `inset 0 0 25px ${metric.color}15, 0 0 35px ${metric.color}10`,
         }}
       />
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-muted-foreground">{title}</span>
-          <div className="p-2 rounded-lg" style={{ backgroundColor: `${color}15` }}>
-            <Icon className="w-4 h-4" style={{ color }} />
+          <span className="text-sm text-muted-foreground">{metric.title}</span>
+          <div className="p-2 rounded-lg" style={{ backgroundColor: `${metric.color}15` }}>
+            <Icon className="w-4 h-4" style={{ color: metric.color }} />
           </div>
         </div>
-        <div className="text-2xl font-bold text-foreground">{value}</div>
-        <div className="text-xs mt-1" style={{ color }}>
-          {change} this week
+        <div className="text-2xl font-bold text-foreground">{metric.value}</div>
+        <div className="text-xs mt-1" style={{ color: metric.color }}>
+          {metric.change}
         </div>
       </div>
     </motion.div>
@@ -329,6 +310,32 @@ function StatCard({
 }
 
 export function Dashboard() {
+  const { client, userId } = useSupabase()
+  const [summary, setSummary] = useState<DashboardSummary>(EMPTY_SUMMARY)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadDashboard = async () => {
+      setIsLoading(true)
+      const nextSummary = await getDashboardSummary(client, userId)
+
+      if (cancelled) {
+        return
+      }
+
+      setSummary(nextSummary)
+      setIsLoading(false)
+    }
+
+    void loadDashboard()
+
+    return () => {
+      cancelled = true
+    }
+  }, [client, userId])
+
   return (
     <div className="relative z-10 container mx-auto px-4 py-8 max-w-7xl">
       <motion.div
@@ -338,24 +345,31 @@ export function Dashboard() {
         animate="visible"
       >
         <BentoCard className="col-span-full mb-4 p-6">
-          <TypewriterWelcome />
+          <TypewriterWelcome streak={summary.streak} />
         </BentoCard>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <BentoCard className="lg:col-span-2">
-            <FocusChart />
+            <FocusChart data={summary.focusTrend} description={summary.description} />
           </BentoCard>
 
           <BentoCard className="lg:col-span-1">
-            <ActivityContribution />
+            <ActivityContribution data={summary.contribution} />
           </BentoCard>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-          {STATS.map((stat) => (
-            <StatCard key={stat.title} {...stat} icon={stat.icon} />
+          {summary.metrics.map((metric) => (
+            <StatCard key={metric.key} metric={metric} />
           ))}
         </div>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-6">
+            <LoaderCircle className="size-4 animate-spin" />
+            正在加载真实统计数据…
+          </div>
+        ) : null}
       </motion.div>
     </div>
   )

@@ -1,73 +1,108 @@
-# React + TypeScript + Vite
+# GeekLearn Copilot
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+一个面向个人成长与学习复盘的前端应用，当前聚焦三个核心场景：
 
-Currently, two official plugins are available:
+- 首页：展示产品定位与入口
+- Dashboard：展示真实学习统计、近 7 天趋势和年度贡献
+- Profile：管理学习目标、AI personality，并写入最小学习记录
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 技术栈
 
-## React Compiler
+- React 19
+- TypeScript
+- Vite 8
+- Tailwind CSS 4
+- Clerk
+- Supabase
+- Framer Motion
+- Recharts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 当前页面结构
 
-## Expanding the ESLint configuration
+- `/`：产品首页
+- `/dashboard`：学习数据面板
+- `/profile`：个人配置与学习记录入口
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 当前数据策略
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- 已配置 Clerk + Supabase 时：
+  - Profile 设置会优先写入 `user_settings`
+  - 学习记录会优先写入 `user_logs`
+  - Copilot 历史会优先写入 `ai_chat_histories`
+- 如果缺少云端配置：
+  - 应用会自动退回到浏览器本地存储模式
+  - 仍然可以完整体验目标配置、打卡记录和 Dashboard 统计
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 建议的数据表
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### `user_settings`
+
+- `user_id`
+- `daily_algo`
+- `daily_words`
+- `weekend_rest`
+- `ai_personality`
+- `updated_at`
+
+### `user_logs`
+
+- `id`
+- `user_id`
+- `record_date`
+- `category`
+- `duration_minutes`
+- `note`
+- `created_at`
+
+### `ai_chat_histories`
+
+- `id`
+- `user_id`
+- `user_prompt`
+- `ai_response`
+- `created_at`
+
+## 环境变量
+
+在项目根目录创建 `.env.local`，按需配置：
+
+```bash
+VITE_CLERK_PUBLISHABLE_KEY=
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+VITE_COPILOT_API_URL=
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+说明：
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `VITE_CLERK_PUBLISHABLE_KEY`：开启 Clerk 登录能力
+- `VITE_SUPABASE_URL` 与 `VITE_SUPABASE_ANON_KEY`：开启真实数据持久化
+- `VITE_COPILOT_API_URL`：可选的 Copilot 服务端接口地址；未配置时自动使用本地上下文回复
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 本地运行
+
+```bash
+npm install
+npm run dev
 ```
+
+## 质量校验
+
+```bash
+npm run lint
+npm run build
+```
+
+## Supabase 初始化
+
+- 直接执行 [schema.sql](file:///d:/Workspace/mysite/supabase/schema.sql)
+- 按步骤配置参考 [setup.md](file:///d:/Workspace/mysite/supabase/setup.md)
+
+## 当前开发重点
+
+当前代码已经从纯 mock 页面升级为“可产生真实数据闭环”的版本，后续建议继续推进：
+
+- 完善 Supabase 表结构与 RLS
+- 为 Dashboard 增加更细的统计维度
+- 将 Copilot 服务端接口切换为真实模型代理
+- 补充自动化测试与更完整的学习记录页面
